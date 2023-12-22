@@ -5,7 +5,7 @@ SET GLOBAL log_bin_trust_function_creators = 1 //
 DROP TABLE IF EXISTS users //
 DROP TABLE IF EXISTS apiTokens //
 DROP FUNCTION IF EXISTS genApiToken //
-DROP FUNCTION checkApiToken //
+DROP FUNCTION IF EXISTS checkApiToken //
 
 /* TABLES */
 CREATE TABLE apiTokens(
@@ -37,14 +37,14 @@ INSERT INTO users VALUES (1, 'andre.cintra', SHA2('endgame', 256), 'arcin_es@hot
 
 /* PROCEDURES AND FUNCTIONS */
 CREATE FUNCTION genApiToken (v_user VARCHAR(256), v_key VARCHAR(256))
-RETURNS BOOLEAN
+RETURNS VARCHAR(256)
 BEGIN
     DECLARE newToken VARCHAR(256);
     DECLARE tokenID INT DEFAULT NULL = -1;
 
     SELECT ID INTO tokenID FROM apiTokens
-    WHERE TX_USER = SHA2(v_user, 256)
-    AND TX_PASSWORD = SHA2(v_key, 256);
+    WHERE TX_USER = v_user
+    AND TX_PASSWORD = v_key;
 
     IF tokenID > -1 THEN
         SET newToken = SHA2(SYSDATE(), 256);
@@ -55,9 +55,14 @@ BEGIN
             TS_VALID_UPTO = DATE_ADD(SYSDATE(), INTERVAL 2 HOUR)
         WHERE ID = tokenID;
 
-        RETURN TRUE;
+       	IF ROW_COUNT() > 0 THEN
+        	RETURN newToken;
+       	ELSE
+       		RETURN -1;
+       	END IF;
+       
     ELSE
-        RETURN FALSE;
+        RETURN -2;
     END IF;
 
 END
