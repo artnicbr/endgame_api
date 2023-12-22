@@ -9,10 +9,42 @@ class Authenticator(Resource):
         self.mysql = param
 
     def put(self):
-        api_user = request.json["user"]
-        api_key = request.json["key"]
+        status = 200
+        result = None
+        message = None
 
-        cursor = self.mysql.connection.cursor()
-        result = cursor.callproc('genApiToken',[api_user, api_key])
+        try:
+            api_user = request.json["user"]
+            api_key = request.json["key"]
 
-        return {"status": 200, "result": result}
+            cursor = self.mysql.connection.cursor()
+            result = cursor.callproc('genApiToken',[api_user, api_key])
+        except Exception as ex:
+            status = 500
+            message = str(ex)
+
+        return {
+            "status": status, 
+            "result": result, 
+            "message": message
+        }
+    
+    def post(self):
+        status = 200
+        result = None
+        message = None
+
+        try:
+            api_token = request.headers.get("token")
+
+            cursor = self.mysql.connection.cursor()
+            result = cursor.callproc('checkApiToken',[api_token])
+        except Exception as ex:
+            status = 500
+            message = str(ex)
+
+        return {
+            "status": status, 
+            "result": result, 
+            "message": message
+        }

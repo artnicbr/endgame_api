@@ -12,5 +12,4 @@ class Routes:
         api.add_resource(User, '/user')
 
         Authenticator.setDatabase(mysql)
-        api.add_resource(Authenticator, '/genToken')
-        api.add_resource(Authenticator, '/validate')
+        api.add_resource(Authenticator, '/genToken', '/validate')

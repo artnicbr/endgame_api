@@ -1,10 +1,11 @@
 DELIMITER //
-SET GLOBAL log_bin_trust_function_creators = 1;
+SET GLOBAL log_bin_trust_function_creators = 1 //
 
 /* DROP AND CLEAN */
 DROP TABLE IF EXISTS users //
 DROP TABLE IF EXISTS apiTokens //
 DROP FUNCTION IF EXISTS genApiToken //
+DROP FUNCTION checkApiToken //
 
 /* TABLES */
 CREATE TABLE apiTokens(
@@ -35,26 +36,43 @@ INSERT INTO apiTokens VALUES (1, 'bd01b0b648c2c64eb1bddd9361d9972ea684b344fedc4d
 INSERT INTO users VALUES (1, 'andre.cintra', SHA2('endgame', 256), 'arcin_es@hotmail.com') //
 
 /* PROCEDURES AND FUNCTIONS */
-
 CREATE FUNCTION genApiToken (v_user VARCHAR(256), v_key VARCHAR(256))
 RETURNS BOOLEAN
 BEGIN
     DECLARE newToken VARCHAR(256);
-    DECLARE tokenID INT DEFAULT NULL;
+    DECLARE tokenID INT DEFAULT NULL = -1;
 
     SELECT ID INTO tokenID FROM apiTokens
     WHERE TX_USER = SHA2(v_user, 256)
     AND TX_PASSWORD = SHA2(v_key, 256);
 
-    IF tokenID <> NULL THEN
-        SET newToken = SHA2(SYSDATE, 256);
+    IF tokenID > -1 THEN
+        SET newToken = SHA2(SYSDATE(), 256);
 
         UPDATE apiTokens
         SET 
             TX_ACCESS_TOKEN = newToken,
-            TS_VALID_UPTO = DATE_ADD(SYSDATE, INTERVAL 2 HOUR)
+            TS_VALID_UPTO = DATE_ADD(SYSDATE(), INTERVAL 2 HOUR)
         WHERE ID = tokenID;
 
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+
+END
+//
+
+CREATE FUNCTION checkApiToken (v_token VARCHAR(256))
+RETURNS BOOLEAN
+BEGIN
+    DECLARE tokenID INT DEFAULT NULL = -1;
+
+    SELECT ID INTO tokenID FROM apiTokens
+    WHERE TX_ACCESS_TOKEN = v_token
+    AND SYSDATE() <= TS_VALID_UPTO;
+
+    IF tokenID > -1 THEN
         RETURN TRUE;
     ELSE
         RETURN FALSE;
